@@ -3092,6 +3092,10 @@
           "description": "Use separate wallpaper folders for each monitor",
           "label": "Per-Monitor Directories"
         },
+        "sync-theme": {
+          "description": "Automatically update wallpaper on system theme change",
+          "label": "Sync Theme"
+        },
         "transition-duration": {
           "description": "Length of the wallpaper change animation in milliseconds",
           "label": "Transition Duration"

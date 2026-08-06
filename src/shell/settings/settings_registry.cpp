@@ -662,6 +662,11 @@ namespace settings {
         tr("settings.schema.wallpaper.per-monitor-directories.description"), {"wallpaper", "per_monitor_directories"},
         ToggleSetting{cfg.wallpaper.perMonitorDirectories}, "per display folder"
     ));
+    entries.push_back(makeEntry(
+        SettingsSection::Wallpaper, "directories", tr("settings.schema.wallpaper.sync-theme.label"),
+        tr("settings.schema.wallpaper.sync-theme.description"), {"wallpaper", "sync_theme"},
+        ToggleSetting{cfg.wallpaper.syncTheme}, "sync dark light mode wallpaper"
+    ));
     for (const auto& outputOpt : env.availableOutputs) {
       const std::string& connector = outputOpt.value;
       if (connector.empty()) {

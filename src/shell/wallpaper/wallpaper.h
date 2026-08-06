@@ -42,6 +42,7 @@ public:
       noctalia::theme::ThemeService* themeService = nullptr
   );
   void onOutputChange();
+  void onThemeModeChanged();
   // Mark an output as driven by an external wallpaper source (e.g. an mpvpaper plugin):
   // its Background surface is torn down so the external surface shows through. Runtime-only
   // (not persisted) — it clears on restart and is re-asserted by the owner.

@@ -605,6 +605,7 @@ void Application::initStyleThemeAndWayland() {
            {"NOCTALIA_THEME_MODE_PREVIOUS", *previousMode},
            {"NOCTALIA_THEME_MODE_CONFIGURED", configuredMode}}
       );
+      m_wallpaper.onThemeModeChanged();
     }
   });
   m_themeService.apply();

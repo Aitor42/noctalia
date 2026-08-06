@@ -115,6 +115,7 @@ transition_on_startup = false       # animate the first wallpaper at shell start
 directory           = "~/Pictures/Wallpapers"
 directory_light     = ""            # optional day-mode directory
 directory_dark      = ""            # optional night-mode directory
+sync_theme          = false         # auto-switch wallpaper on dark/light toggle
 
 [wallpaper.default]
 path = ""                            # optional initial/default wallpaper path

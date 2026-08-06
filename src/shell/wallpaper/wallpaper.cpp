@@ -567,6 +567,18 @@ void Wallpaper::onOutputChange() {
   }
 }
 
+void Wallpaper::onThemeModeChanged() {
+  if (m_config == nullptr
+      || !m_config->config().wallpaper.enabled
+      || !m_config->config().wallpaper.syncTheme
+      || m_instances.empty()) {
+    return;
+  }
+
+  kLog.info("theme mode changed, syncing wallpaper");
+  switchWallpaperTo(PickWallpaper::Random);
+}
+
 std::vector<WallpaperChange> Wallpaper::onStateChange() {
   kLog.info("state file changed, checking for updates");
 
