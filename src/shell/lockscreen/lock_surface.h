@@ -63,9 +63,11 @@ public:
   void setWallpaperFillColor(Color fillColor);
   void setDesktopCapture(std::optional<ScreencopyImage> capture, bool useAsBackground);
   void configureTransition(
-      std::optional<LockscreenTransitionKind> transition, const LockscreenTransitionParams& params, float durationMs
+      std::optional<LockscreenTransitionKind> transition, const LockscreenTransitionParams& params, float durationMs,
+      bool skipEnterTransition = false
   );
   void startEnterTransition();
+  void skipEnterTransition();
   void startExitTransition();
   [[nodiscard]] bool transitionInputReady() const noexcept;
   [[nodiscard]] bool exitTransitionComplete() const noexcept;

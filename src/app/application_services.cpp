@@ -1119,9 +1119,10 @@ void Application::initSystemBusServices() {
             }
             m_releaseSleepDelayWhenLocked = true;
             if (m_lockScreen.isActive()) {
+              m_lockScreen.skipEnterTransition();
               return;
             }
-            if (!m_lockScreen.lock()) {
+            if (!m_lockScreen.lock(true)) {
               m_releaseSleepDelayWhenLocked = false;
               if (m_logindService != nullptr) {
                 m_logindService->releaseSleepDelayInhibit();
