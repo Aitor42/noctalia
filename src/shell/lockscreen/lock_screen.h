@@ -53,6 +53,8 @@ public:
   );
   bool lock(bool skipEnterTransition = false);
   void skipEnterTransition();
+  bool cancelUnlock();
+  [[nodiscard]] bool isUnlocking() const noexcept { return m_unlocking; }
   void primeDesktopCaptures();
   void clearPrimedDesktopCaptures();
   void unlock();

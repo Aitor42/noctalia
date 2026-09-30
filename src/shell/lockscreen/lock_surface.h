@@ -69,6 +69,7 @@ public:
   void startEnterTransition();
   void skipEnterTransition();
   void startExitTransition();
+  void cancelExitTransition();
   [[nodiscard]] bool transitionInputReady() const noexcept;
   [[nodiscard]] bool exitTransitionComplete() const noexcept;
   void setTransitionCallback(std::function<void()> callback) { m_transitionCallback = std::move(callback); }

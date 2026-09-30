@@ -865,6 +865,21 @@ void LockSurface::startExitTransition() {
   requestRedraw();
 }
 
+void LockSurface::cancelExitTransition() {
+  m_enterTransitionRequested = false;
+  cancelTransitionAnimation();
+  if (m_transitionPhase != TransitionPhase::Disabled) {
+    m_transitionPhase = TransitionPhase::Stable;
+    m_transitionProgress = 1.0F;
+    syncTransitionCover();
+  }
+  focusPasswordField();
+  requestLayout();
+  requestUpdate();
+  requestRedraw();
+  notifyTransitionStateChanged();
+}
+
 bool LockSurface::transitionInputReady() const noexcept {
   return m_transitionPhase == TransitionPhase::Disabled || m_transitionPhase == TransitionPhase::Stable;
 }

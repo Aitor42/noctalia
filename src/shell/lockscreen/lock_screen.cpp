@@ -143,6 +143,9 @@ bool LockScreen::lock(bool skipEnterTransition) {
     notifyLockAborted();
     return false;
   }
+  if (m_unlocking) {
+    cancelUnlock();
+  }
   if (isActive() || m_lockStarting) {
     if (skipEnterTransition) {
       this->skipEnterTransition();
@@ -508,10 +511,10 @@ void LockScreen::onKeyboardEvent(const KeyboardEvent& event) {
 
 bool LockScreen::isActive() const noexcept { return m_lockPending || m_locked; }
 
-bool LockScreen::isSessionLocked() const noexcept { return m_locked; }
+bool LockScreen::isSessionLocked() const noexcept { return m_locked && !m_unlocking; }
 
 bool LockScreen::tryFlushPendingAfterLocked() {
-  if (m_locked && m_pendingAfterLocked && allSurfacesReady()) {
+  if (m_locked && !m_unlocking && m_pendingAfterLocked && allSurfacesReady()) {
     auto pending = std::move(m_pendingAfterLocked);
     m_pendingAfterLocked = {};
     m_suspendTimeoutTimer.stop();
@@ -564,11 +567,39 @@ void LockScreen::skipEnterTransition() {
   }
 }
 
+bool LockScreen::cancelUnlock() {
+  if (!m_unlocking) {
+    return false;
+  }
+  kLog.info("aborting session unlock; relocking session");
+  m_unlocking = false;
+  m_unlockFinishQueued = false;
+  m_unlockTransitionTimer.stop();
+  invalidatePendingAuthentication();
+
+  for (auto& instance : m_instances) {
+    if (instance.surface != nullptr) {
+      instance.surface->cancelExitTransition();
+    }
+  }
+
+  clearSensitiveString(m_password);
+  m_status.clear();
+  m_statusIsError = false;
+  updatePromptOnSurfaces();
+  startFingerprint();
+
+  return true;
+}
+
 void LockScreen::runAfterSessionLocked(std::function<void()> fn) {
   if (fn == nullptr) {
     return;
   }
   m_pendingAfterLocked = std::move(fn);
+  if (m_unlocking) {
+    cancelUnlock();
+  }
   skipEnterTransition();
   if (tryFlushPendingAfterLocked()) {
     return;

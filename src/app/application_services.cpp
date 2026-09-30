@@ -1107,6 +1107,10 @@ void Application::initSystemBusServices() {
               }
               return;
             }
+            if (m_lockScreen.isUnlocking()) {
+              m_lockScreen.cancelUnlock();
+              m_lockScreen.skipEnterTransition();
+            }
             if (m_lockScreen.isSessionLocked()) {
               m_releaseSleepDelayWhenLocked = false;
               if (m_logindService != nullptr) {
