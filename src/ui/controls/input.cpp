@@ -461,9 +461,23 @@ void Input::setPasswordMode(bool enabled) {
     return;
   }
   m_passwordMode = enabled;
+  m_passwordRevealed = false;
   if (m_passwordMode) {
     clearEditHistory();
   } else {
+    syncPasswordGlyphNodes(0);
+  }
+  updateDisplayText();
+  notifyTextInputStateChanged(TextInputChangeCause::Other);
+  markTextContentChanged();
+}
+
+void Input::setPasswordRevealed(bool revealed) {
+  if (!m_passwordMode || m_passwordRevealed == revealed) {
+    return;
+  }
+  m_passwordRevealed = revealed;
+  if (m_passwordRevealed) {
     syncPasswordGlyphNodes(0);
   }
   updateDisplayText();
@@ -478,6 +492,7 @@ void Input::setMultiline(bool enabled) {
   m_multiline = enabled;
   if (enabled && m_passwordMode) {
     m_passwordMode = false;
+    m_passwordRevealed = false;
     syncPasswordGlyphNodes(0);
   }
   if (m_label != nullptr) {
@@ -706,7 +721,7 @@ TextInputState Input::textInputState() const {
       .purpose = password ? TextInputPurpose::Password : TextInputPurpose::Normal,
       .sendSurroundingText = !password,
       .sensitiveData = password,
-      .hiddenText = password,
+      .hiddenText = passwordMasked(),
       .preeditVisible = !password,
   };
 }
@@ -816,7 +831,7 @@ void Input::markTextContentChanged() {
 }
 
 void Input::rebuildCursorStopsFull(Renderer& renderer) {
-  const bool showPasswordGlyphs = m_passwordMode && !m_value.empty();
+  const bool showPasswordGlyphs = passwordMasked() && !m_value.empty();
 
   m_stopByte.clear();
   m_stopX.clear();
@@ -880,7 +895,7 @@ void Input::recomputeContentLeadSlack(Renderer& renderer, float width, bool show
   const float rightInset = showClearButton ? clearButtonTextReserveWidth() : textInset;
   const float viewportWidth = std::max(0.0F, width - textInset - rightInset);
   float textExtent = 0.0F;
-  const bool showPasswordGlyphs = m_passwordMode && !m_value.empty();
+  const bool showPasswordGlyphs = passwordMasked() && !m_value.empty();
   if (showPasswordGlyphs) {
     const std::size_t charCount = !m_stopByte.empty() ? m_stopByte.size() - 1 : 0;
     const float passwordCellSize = std::round(m_fontSize * kPasswordGlyphScale);
@@ -927,7 +942,7 @@ std::size_t Input::visibleLabelEndByte(float contentWidth, std::size_t startByte
 }
 
 void Input::updateLabelVisibleSlice(Renderer& renderer) {
-  if (m_label == nullptr || m_value.empty() || (m_passwordMode && !m_value.empty())) {
+  if (m_label == nullptr || m_value.empty() || passwordMasked()) {
     return;
   }
 
@@ -960,7 +975,7 @@ void Input::updateLabelVisibleSlice(Renderer& renderer) {
 }
 
 void Input::syncLabelScrollPosition() {
-  if (m_label == nullptr || (m_passwordMode && !m_value.empty())) {
+  if (m_label == nullptr || (passwordMasked() && !m_value.empty())) {
     return;
   }
   if (m_multiline) {
@@ -984,7 +999,7 @@ void Input::doLayout(Renderer& renderer) {
   setSize(w, h);
   const bool showClearButton = clearButtonVisible();
 
-  const bool showPasswordGlyphs = m_passwordMode && !m_value.empty();
+  const bool showPasswordGlyphs = passwordMasked() && !m_value.empty();
   m_label->setVisible(!showPasswordGlyphs);
 
   // Wrapped stops depend on the viewport width, not just the text.
@@ -1618,7 +1633,7 @@ void Input::updateDisplayText() {
   if (m_value.empty() && !m_placeholder.empty()) {
     m_labelVisibleSlice.clear();
     m_label->setText(m_placeholder);
-  } else if (m_passwordMode) {
+  } else if (passwordMasked()) {
     m_labelVisibleSlice.clear();
     m_label->setText(std::string{});
   } else {

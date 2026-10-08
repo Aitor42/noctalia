@@ -815,10 +815,10 @@ std::unique_ptr<Flex> NetworkTab::create() {
                 if (m_passwordInput == nullptr) {
                   return;
                 }
-                m_passwordRevealed = !m_passwordRevealed;
-                m_passwordInput->setPasswordMode(!m_passwordRevealed);
+                const bool revealed = !m_passwordInput->passwordRevealed();
+                m_passwordInput->setPasswordRevealed(revealed);
                 if (m_passwordRevealButton != nullptr) {
-                  m_passwordRevealButton->setGlyph(m_passwordRevealed ? "eye-off" : "eye");
+                  m_passwordRevealButton->setGlyph(revealed ? "eye-off" : "eye");
                 }
               },
       }),
@@ -915,7 +915,6 @@ void NetworkTab::onClose() {
   m_passwordTitle = nullptr;
   m_passwordInput = nullptr;
   m_passwordRevealButton = nullptr;
-  m_passwordRevealed = false;
   m_enterpriseFields = nullptr;
   m_eapSelect = nullptr;
   m_phase2Select = nullptr;
@@ -1098,10 +1097,9 @@ void NetworkTab::clearPasswordPrompt() {
   m_pendingEnterprise = false;
   m_pendingSsid.clear();
   m_pendingAccessPoint.reset();
-  m_passwordRevealed = false;
   if (m_passwordInput != nullptr) {
     m_passwordInput->setValue("");
-    m_passwordInput->setPasswordMode(true);
+    m_passwordInput->setPasswordRevealed(false);
   }
   if (m_passwordRevealButton != nullptr) {
     m_passwordRevealButton->setGlyph("eye");

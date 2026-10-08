@@ -91,7 +91,6 @@ private:
   Label* m_passwordTitle = nullptr;
   Input* m_passwordInput = nullptr;
   Button* m_passwordRevealButton = nullptr;
-  bool m_passwordRevealed = false;
   // 802.1X form. Hidden for pre-shared-key networks, which keep the single
   // password field below it.
   Flex* m_enterpriseFields = nullptr;
