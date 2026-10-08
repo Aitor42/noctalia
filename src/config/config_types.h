@@ -1057,7 +1057,9 @@ struct ShellConfig {
 
   struct PanelConfig {
     PanelTransparencyMode transparencyMode = PanelTransparencyMode::Solid;
-    bool borders = true;                   // outline on floating panel surfaces
+    bool borders = true; // outline on floating panel surfaces
+    ColorSpec borderColor = colorSpecFromRole(ColorRole::Outline);
+    float borderWidth = Style::borderWidth;
     bool shadow = true;                    // cast the global [shell.shadow] from panel surfaces
     bool listItemBackground = false;       // filled rounded background behind launcher/clipboard list items
     bool wallpaperShowNames = true;        // caption wallpaper picker thumbnails with their file name
