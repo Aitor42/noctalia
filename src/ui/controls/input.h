@@ -3,6 +3,7 @@
 #include "core/timer_manager.h"
 #include "render/core/renderer.h"
 #include "render/scene/node.h"
+#include "ui/palette.h"
 #include "ui/signal.h"
 #include "ui/style.h"
 #include "ui/text_input_client.h"
@@ -66,6 +67,9 @@ public:
   void setSubmitOnEnter(bool enabled);
   void setEnabled(bool enabled);
   void setSurfaceOpacity(float opacity);
+  /// Unfocused frame fill. Fields on a SurfaceVariant card use Surface so they stand out; focus always fills with
+  /// Surface.
+  void setSurfaceRole(ColorRole role);
   void setFrameRadius(float radius);
   [[nodiscard]] bool enabled() const noexcept { return m_enabled; }
   [[nodiscard]] bool passwordRevealed() const noexcept { return m_passwordRevealed; }
@@ -242,6 +246,7 @@ private:
   bool m_invalid = false;
   bool m_frameVisible = true;
   bool m_embeddedOnSolidPrimary = false;
+  ColorRole m_surfaceRole = ColorRole::SurfaceVariant;
   float m_surfaceOpacity = 1.0F;
   float m_frameRadius = Style::radiusMd;
   bool m_enabled = true;

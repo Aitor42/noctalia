@@ -592,6 +592,14 @@ void Input::setSurfaceOpacity(float opacity) {
   applyVisualState();
 }
 
+void Input::setSurfaceRole(ColorRole role) {
+  if (m_surfaceRole == role) {
+    return;
+  }
+  m_surfaceRole = role;
+  applyVisualState();
+}
+
 void Input::setFrameRadius(float radius) {
   const float clamped = std::max(0.0F, radius);
   if (m_frameRadius == clamped) {
@@ -1531,8 +1539,8 @@ void Input::applyVisualState() {
 
   if (m_frameVisible) {
     m_background->setVisible(true);
-    const Color fill = focused ? resolved(ColorRole::Surface, m_surfaceOpacity)
-                               : resolved(ColorRole::SurfaceVariant, m_surfaceOpacity);
+    const Color fill =
+        focused ? resolved(ColorRole::Surface, m_surfaceOpacity) : resolved(m_surfaceRole, m_surfaceOpacity);
     const Color border = m_invalid
         ? resolved(ColorRole::Error)
         : (focused ? resolveColorSpec(focusRingColorSpec())
