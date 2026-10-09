@@ -117,6 +117,10 @@ void LockScreen::setSessionHooks(
   m_onLockAborted = std::move(onLockAborted);
 }
 
+void LockScreen::setSuspendReadyCallback(std::function<void()> onSuspendReady) {
+  m_onSuspendReady = std::move(onSuspendReady);
+}
+
 void LockScreen::setLoginBoxServices(
     SessionActionRunner* sessionActions, MprisService* mpris, const WeatherService* weather, HttpClient* httpClient
 ) {
@@ -132,6 +136,9 @@ void LockScreen::setLoginBoxServices(
 }
 
 bool LockScreen::lock(bool skipEnterTransition) {
+  if (skipEnterTransition || m_pendingAfterLocked != nullptr) {
+    m_skipEnterTransition = true;
+  }
   if (m_wayland == nullptr || m_renderContext == nullptr) {
     invalidateDesktopCaptures();
     notifyLockAborted();
@@ -147,7 +154,7 @@ bool LockScreen::lock(bool skipEnterTransition) {
     cancelUnlock();
   }
   if (isActive() || m_lockStarting) {
-    if (skipEnterTransition) {
+    if (m_skipEnterTransition) {
       this->skipEnterTransition();
     }
     return true;
@@ -167,7 +174,6 @@ bool LockScreen::lock(bool skipEnterTransition) {
     return true;
   }
 
-  m_skipEnterTransition = skipEnterTransition || m_pendingAfterLocked != nullptr;
   m_lockStarting = true;
 
   if (m_desktopCapturesPrimed) {
@@ -235,7 +241,6 @@ void LockScreen::unlock() {
 
   m_pendingAfterLocked = {};
   m_skipEnterTransition = false;
-  m_suspendTimeoutTimer.stop();
   invalidatePendingAuthentication();
   stopFingerprint();
 
@@ -514,14 +519,22 @@ bool LockScreen::isActive() const noexcept { return m_lockPending || m_locked; }
 bool LockScreen::isSessionLocked() const noexcept { return m_locked && !m_unlocking; }
 
 bool LockScreen::tryFlushPendingAfterLocked() {
-  if (m_locked && !m_unlocking && m_pendingAfterLocked && allSurfacesReady()) {
-    auto pending = std::move(m_pendingAfterLocked);
-    m_pendingAfterLocked = {};
-    m_suspendTimeoutTimer.stop();
-    DeferredCall::callLater(std::move(pending));
+  if (m_locked && !m_unlocking && allSurfacesReady()) {
+    if (m_pendingAfterLocked) {
+      auto pending = std::move(m_pendingAfterLocked);
+      m_pendingAfterLocked = {};
+      DeferredCall::callLater(std::move(pending));
+    }
+    notifySuspendReady();
     return true;
   }
   return false;
+}
+
+void LockScreen::notifySuspendReady() {
+  if (m_onSuspendReady) {
+    m_onSuspendReady();
+  }
 }
 
 void LockScreen::handleTransitionStateChanged() {
@@ -553,9 +566,9 @@ void LockScreen::dispatchPendingAfterLocked() {
   if (m_pendingAfterLocked) {
     auto pending = std::move(m_pendingAfterLocked);
     m_pendingAfterLocked = {};
-    m_suspendTimeoutTimer.stop();
     DeferredCall::callLater(std::move(pending));
   }
+  notifySuspendReady();
 }
 
 void LockScreen::skipEnterTransition() {
@@ -565,6 +578,7 @@ void LockScreen::skipEnterTransition() {
       instance.surface->skipEnterTransition();
     }
   }
+  tryFlushPendingAfterLocked();
 }
 
 bool LockScreen::cancelUnlock() {
@@ -575,6 +589,7 @@ bool LockScreen::cancelUnlock() {
   m_unlocking = false;
   m_unlockFinishQueued = false;
   m_unlockTransitionTimer.stop();
+  m_skipEnterTransition = true;
   invalidatePendingAuthentication();
 
   for (auto& instance : m_instances) {
@@ -589,6 +604,7 @@ bool LockScreen::cancelUnlock() {
   updatePromptOnSurfaces();
   startFingerprint();
 
+  tryFlushPendingAfterLocked();
   return true;
 }
 
@@ -597,6 +613,7 @@ void LockScreen::runAfterSessionLocked(std::function<void()> fn) {
     return;
   }
   m_pendingAfterLocked = std::move(fn);
+  m_skipEnterTransition = true;
   if (m_unlocking) {
     cancelUnlock();
   }
@@ -610,6 +627,7 @@ void LockScreen::runAfterSessionLocked(std::function<void()> fn) {
   if (!lock(true)) {
     m_pendingAfterLocked = {};
     m_skipEnterTransition = false;
+    notifySuspendReady();
   }
 }
 
@@ -633,16 +651,6 @@ void LockScreen::handleLocked(void* data, ext_session_lock_v1* /*lock*/) {
     }
   }
 
-  // Start the fallback timer (3 seconds) to trigger suspend anyway if surfaces take too long to render
-  self->m_suspendTimeoutTimer.start(std::chrono::seconds(3), [self]() {
-    if (self->m_pendingAfterLocked) {
-      kLog.warn("Lock screen surfaces took too long to render; suspending fallback triggered");
-      auto pending = std::move(self->m_pendingAfterLocked);
-      self->m_pendingAfterLocked = {};
-      DeferredCall::callLater(std::move(pending));
-    }
-  });
-
   self->updatePromptOnSurfaces();
   self->updateIndicatorsOnSurfaces();
   self->startFingerprint();
@@ -664,6 +672,7 @@ void LockScreen::handleFinished(void* data, ext_session_lock_v1* /*lock*/) {
   self->m_unlockFinishQueued = false;
   self->invalidatePendingAuthentication();
   self->stopFingerprint();
+  self->notifySuspendReady();
 
   if (self->m_lock != nullptr) {
     if (self->m_locked) {
@@ -738,14 +747,17 @@ bool LockScreen::shouldCaptureDesktop() const {
 }
 
 bool LockScreen::allSurfacesReady() const {
+  if (m_instances.empty()) {
+    return true;
+  }
   for (const auto& instance : m_instances) {
-    if (instance.surface != nullptr && !instance.surface->firstFrameRendered()) {
+    if (instance.surface != nullptr && !instance.surface->isSafeFrameRendered()) {
       return false;
     }
   }
 
-  // With all outputs disconnected, no surface can ever render, so allow pending
-  // actions to run instead of waiting for the fallback timeout.
+  // With all outputs disconnected, no surface can ever render, so there is no
+  // captured desktop visible through a lock surface to wait for.
   return true;
 }
 
@@ -1056,12 +1068,12 @@ void LockScreen::notifyLockAborted() {
   if (m_onLockAborted) {
     m_onLockAborted();
   }
+  notifySuspendReady();
 }
 
 void LockScreen::resetLockState() {
   m_pendingAfterLocked = {};
   m_skipEnterTransition = false;
-  m_suspendTimeoutTimer.stop();
   m_unlockTransitionTimer.stop();
   m_lockDeferred = false;
   m_lockStarting = false;
@@ -1069,6 +1081,7 @@ void LockScreen::resetLockState() {
   m_unlockFinishQueued = false;
   m_activeTransition.reset();
   invalidateDesktopCaptures();
+  notifySuspendReady();
   if (m_lock == nullptr) {
     m_lockPending = false;
     m_locked = false;

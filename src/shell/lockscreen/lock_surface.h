@@ -97,7 +97,9 @@ public:
   void setOutputKey(std::string outputKey) { m_outputKey = std::move(outputKey); }
   void setWidgetsHost(LockscreenWidgetsHost* host) noexcept { m_widgetsHost = host; }
 
-  [[nodiscard]] bool firstFrameRendered() const noexcept { return m_firstFrameRendered; }
+  [[nodiscard]] bool isSafeFrameRendered() const noexcept;
+  void requireSafeFrame();
+  [[nodiscard]] bool isSafeState() const noexcept;
   void setRenderCallback(std::function<void()> callback) { m_renderCallback = std::move(callback); }
 
   static void handleConfigure(
@@ -106,6 +108,7 @@ public:
   );
 
 protected:
+  void render() override;
   void onFrameCallbackDone() override;
 
 private:
@@ -232,7 +235,11 @@ private:
   std::string m_layoutLabel;
   std::string m_outputKey;
   LockscreenWidgetsHost* m_widgetsHost = nullptr;
-  bool m_firstFrameRendered = false;
+  std::uint64_t m_currentRenderGeneration = 0;
+  std::uint64_t m_inFlightRenderGeneration = 0;
+  bool m_inFlightFrameIsSafe = false;
+  std::uint64_t m_lastPresentedSafeGeneration = 0;
+  std::uint64_t m_requiredSafeGeneration = 1;
   std::function<void()> m_renderCallback;
   std::function<void()> m_transitionCallback;
 

@@ -85,9 +85,11 @@ public:
     }
   }
 
-  /// Runs `fn` after the session reaches interactive lock (`m_locked`), or immediately if already locked.
-  /// Used so suspend runs after lock surfaces exist. Cleared if lock fails or the lock request is aborted.
+  /// Runs `fn` after the session reaches interactive lock and every lock surface presents a safe frame.
+  /// Used so suspend runs only after lock surfaces no longer show captured desktop pixels.
   void runAfterSessionLocked(std::function<void()> fn);
+  void setSuspendReadyCallback(std::function<void()> onSuspendReady);
+  [[nodiscard]] bool allSurfacesReady() const;
 
   static void handleLocked(void* data, ext_session_lock_v1* lock);
   static void handleFinished(void* data, ext_session_lock_v1* lock);
@@ -104,9 +106,9 @@ private:
   [[nodiscard]] bool captureDesktopSnapshots();
   void invalidateDesktopCaptures();
   [[nodiscard]] bool shouldCaptureDesktop() const;
-  [[nodiscard]] bool allSurfacesReady() const;
   bool tryFlushPendingAfterLocked();
   void dispatchPendingAfterLocked();
+  void notifySuspendReady();
   void applyLockscreenStyle(LockSurface& surface) const;
   void applyOutputRestriction();
   void applyWallpaperStyleToSurfaces();
@@ -167,10 +169,10 @@ private:
   std::function<void()> m_onSessionLocked;
   std::function<void()> m_onSessionUnlocked;
   std::function<void()> m_onLockAborted;
+  std::function<void()> m_onSuspendReady;
   SessionActionRunner* m_sessionActions = nullptr;
   MprisService* m_mpris = nullptr;
   const WeatherService* m_weather = nullptr;
   HttpClient* m_httpClient = nullptr;
-  Timer m_suspendTimeoutTimer;
   Timer m_unlockTransitionTimer;
 };

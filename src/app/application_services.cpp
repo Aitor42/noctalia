@@ -1109,9 +1109,11 @@ void Application::initSystemBusServices() {
             }
             if (m_lockScreen.isUnlocking()) {
               m_lockScreen.cancelUnlock();
+            }
+            if (m_lockScreen.isActive()) {
               m_lockScreen.skipEnterTransition();
             }
-            if (m_lockScreen.isSessionLocked()) {
+            if (m_lockScreen.isSessionLocked() && m_lockScreen.allSurfacesReady()) {
               m_releaseSleepDelayWhenLocked = false;
               if (m_logindService != nullptr) {
                 m_logindService->releaseSleepDelayInhibit();
@@ -1120,7 +1122,6 @@ void Application::initSystemBusServices() {
             }
             m_releaseSleepDelayWhenLocked = true;
             if (m_lockScreen.isActive()) {
-              m_lockScreen.skipEnterTransition();
               return;
             }
             if (!m_lockScreen.lock(true)) {
