@@ -581,7 +581,6 @@ void LockScreen::onSystemResumed() {
   resetGracePeriod();
 }
 
-
 bool LockScreen::tryFlushPendingAfterLocked() {
   if (m_locked && !m_unlocking && allSurfacesReady()) {
     if (m_pendingAfterLocked) {
