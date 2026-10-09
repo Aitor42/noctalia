@@ -827,17 +827,17 @@ void TrayMenu::destroySurface() {
 }
 
 void TrayMenu::restoreBarKeyboardInteractivity() {
-  if (m_keyboardBarLayerSurface == nullptr) {
-    return;
-  }
-  zwlr_layer_surface_v1_set_keyboard_interactivity(
-      m_keyboardBarLayerSurface, static_cast<std::uint32_t>(LayerShellKeyboard::None)
-  );
-  if (m_keyboardBarWlSurface != nullptr) {
-    wl_surface_commit(m_keyboardBarWlSurface);
-  }
+  zwlr_layer_surface_v1* layerSurface = m_keyboardBarLayerSurface;
+  wl_surface* wlSurface = m_keyboardBarWlSurface;
   m_keyboardBarLayerSurface = nullptr;
   m_keyboardBarWlSurface = nullptr;
+  // The parent (a bar or the tray drawer panel) can be destroyed while the menu
+  // is open. Its proxies are then freed, so only touch it while still registered.
+  if (layerSurface == nullptr || m_wayland == nullptr || m_wayland->layerSurfaceFor(wlSurface) != layerSurface) {
+    return;
+  }
+  zwlr_layer_surface_v1_set_keyboard_interactivity(layerSurface, static_cast<std::uint32_t>(LayerShellKeyboard::None));
+  wl_surface_commit(wlSurface);
 }
 
 void TrayMenu::rebuildScenes() {
