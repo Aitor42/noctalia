@@ -732,11 +732,13 @@ void TrayMenu::ensureSurface() {
   };
   popup_chrome::applyToConfig(popupConfig, chrome, placement.chromeAttachment);
 
-  // Layer-shell popups inherit their parent's keyboard interactivity. The bar is
+  // Layer-shell popups inherit their parent's keyboard interactivity. A bar is
   // None, so without this the grabbing popup would get no keyboard focus and ESC
-  // could not reach it. Flip the bar to OnDemand before the popup maps; the
+  // could not reach it. Flip a None parent to OnDemand before the popup maps; a
+  // parent that already takes keyboard (the tray drawer panel) is left alone. The
   // focus-grab path carries keyboard itself, so only the plain grab path needs it.
-  if (!useFocusGrab) {
+  const LayerSurface* parentOwner = m_wayland->layerSurfaceOwnerFor(parentWlSurface);
+  if (!useFocusGrab && parentOwner != nullptr && parentOwner->keyboardInteractivity() == LayerShellKeyboard::None) {
     m_keyboardBarLayerSurface = parentLayerSurface;
     m_keyboardBarWlSurface = parentWlSurface;
     zwlr_layer_surface_v1_set_keyboard_interactivity(

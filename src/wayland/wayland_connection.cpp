@@ -24,6 +24,7 @@
 #include "virtual-keyboard-unstable-v1-client-protocol.h"
 #include "wayland/clipboard_service.h"
 #include "wayland/hyprland/focus_grab_service.h"
+#include "wayland/layer_surface.h"
 #include "wayland/text_input_service.h"
 #include "wayland/virtual_keyboard_service.h"
 #include "wayland/wayland_protocol_policy.h"
@@ -881,9 +882,9 @@ void WaylandConnection::notifySurfaceOutputLeave(wl_surface* surface, wl_output*
   }
 }
 
-void WaylandConnection::registerLayerSurface(wl_surface* surface, zwlr_layer_surface_v1* layerSurface) {
-  if (surface != nullptr && layerSurface != nullptr) {
-    m_layerSurfaceMap[surface] = layerSurface;
+void WaylandConnection::registerLayerSurface(const LayerSurface& layerSurface) {
+  if (layerSurface.wlSurface() != nullptr && layerSurface.layerSurface() != nullptr) {
+    m_layerSurfaceMap[layerSurface.wlSurface()] = &layerSurface;
   }
 }
 
@@ -901,6 +902,11 @@ void WaylandConnection::unregisterSurface(wl_surface* surface) {
 }
 
 zwlr_layer_surface_v1* WaylandConnection::layerSurfaceFor(wl_surface* surface) const noexcept {
+  const LayerSurface* owner = layerSurfaceOwnerFor(surface);
+  return owner != nullptr ? owner->layerSurface() : nullptr;
+}
+
+const LayerSurface* WaylandConnection::layerSurfaceOwnerFor(wl_surface* surface) const noexcept {
   if (surface == nullptr) {
     return nullptr;
   }
