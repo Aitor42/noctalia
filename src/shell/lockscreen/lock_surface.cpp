@@ -933,6 +933,12 @@ bool LockSurface::isSafeFrameRendered() const noexcept {
 }
 
 void LockSurface::requireSafeFrame() {
+  // A pending callback may belong to a render from before normalization. Drop
+  // it so only a callback requested by the replacement safe render can advance
+  // the presented generation.
+  discardPendingFrameCallback();
+  m_inFlightRenderGeneration = 0;
+  m_inFlightFrameIsSafe = false;
   m_requiredSafeGeneration = std::max(m_requiredSafeGeneration, m_currentRenderGeneration + 1);
   requestUpdate();
   requestRedraw();

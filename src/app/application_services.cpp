@@ -1069,6 +1069,7 @@ void Application::initSystemBusServices() {
             m_screenTimeService.setSuspendPaused(true);
             // Resolve any transition on an existing lock before an early return can
             // let a plain or lock-disabled suspend freeze it mid-animation.
+            const bool normalizedTransition = m_lockScreen.isUnlocking() || m_lockScreen.isActive();
             if (m_lockScreen.isUnlocking()) {
               m_lockScreen.cancelUnlock();
             } else if (m_lockScreen.isActive()) {
@@ -1079,16 +1080,24 @@ void Application::initSystemBusServices() {
             if (m_skipLockOnNextSleep) {
               // Noctalia-initiated suspend: skip lock-before-sleep (plain Suspend or already locked).
               m_skipLockOnNextSleep = false;
-              m_releaseSleepDelayWhenLocked = false;
-              if (m_logindService != nullptr) {
-                m_logindService->releaseSleepDelayInhibit();
+              if (normalizedTransition && !m_lockScreen.allSurfacesReady()) {
+                m_releaseSleepDelayWhenLocked = true;
+              } else {
+                m_releaseSleepDelayWhenLocked = false;
+                if (m_logindService != nullptr) {
+                  m_logindService->releaseSleepDelayInhibit();
+                }
               }
               return;
             }
             if (!m_configService.shouldLockBeforeSuspend()) {
-              m_releaseSleepDelayWhenLocked = false;
-              if (m_logindService != nullptr) {
-                m_logindService->releaseSleepDelayInhibit();
+              if (normalizedTransition && !m_lockScreen.allSurfacesReady()) {
+                m_releaseSleepDelayWhenLocked = true;
+              } else {
+                m_releaseSleepDelayWhenLocked = false;
+                if (m_logindService != nullptr) {
+                  m_logindService->releaseSleepDelayInhibit();
+                }
               }
               return;
             }
@@ -1124,7 +1133,7 @@ void Application::initSystemBusServices() {
           m_skipLockOnNextSleep = false;
           m_releaseSleepDelayWhenLocked = false;
           m_screenTimeService.setSuspendPaused(false);
-          if (m_configService.shouldLockBeforeSuspend() && m_logindService != nullptr) {
+          if (m_configService.isLockScreenEnabled() && m_logindService != nullptr) {
             (void)m_logindService->acquireSleepDelayInhibit();
           }
           kLog.info("system resumed; rechecking night light and auto theme schedules");
