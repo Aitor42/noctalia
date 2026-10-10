@@ -1067,6 +1067,13 @@ void Application::initSystemBusServices() {
             m_lockScreen.resetGracePeriod();
             // Screen time must not accumulate across suspend even when lock-before-suspend is off.
             m_screenTimeService.setSuspendPaused(true);
+            // Resolve any transition on an existing lock before an early return can
+            // let a plain or lock-disabled suspend freeze it mid-animation.
+            if (m_lockScreen.isUnlocking()) {
+              m_lockScreen.cancelUnlock();
+            } else if (m_lockScreen.isActive()) {
+              m_lockScreen.skipEnterTransition();
+            }
             // Delay inhibit (when lock_before_suspend is on) holds sleep until we lock.
             // Do not use runAfterSessionLocked here: that slot belongs to lock-and-suspend.
             if (m_skipLockOnNextSleep) {
@@ -1084,12 +1091,6 @@ void Application::initSystemBusServices() {
                 m_logindService->releaseSleepDelayInhibit();
               }
               return;
-            }
-            if (m_lockScreen.isUnlocking()) {
-              m_lockScreen.cancelUnlock();
-            }
-            if (m_lockScreen.isActive()) {
-              m_lockScreen.skipEnterTransition();
             }
             if (m_lockScreen.isSessionLocked() && m_lockScreen.allSurfacesReady()) {
               m_releaseSleepDelayWhenLocked = false;
