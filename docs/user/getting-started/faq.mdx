@@ -342,8 +342,6 @@ By default yes, when the lock screen is enabled. Noctalia holds a logind sleep d
 
 To suspend without locking (for example lid close or `systemctl suspend`), set `[lockscreen].lock_before_suspend = false` in Settings → Security → Lock Screen, or in TOML. Explicit **Lock and Suspend** session/idle actions still lock first.
 
-If sleep begins during a lock or unlock animation, Noctalia stops the animation first. A lock is left in its stable locked state; an unlock is canceled, so the session stays locked. This also applies when suspend is configured not to start a new lock.
-
 </FaqItem>
 
 <FaqItem question="Why can't NetworkManager communicate with wpa_supplicant?" id="wpa-supplicant">
