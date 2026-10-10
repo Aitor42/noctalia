@@ -1061,6 +1061,7 @@ void Application::initSystemBusServices() {
           // fade-complete cleanup races with process freeze.
           m_idleGraceOverlay.hide();
           if (sleeping) {
+            m_lockScreen.onSystemSuspending();
             // Sleep-related locks must never offer passwordless unlock: revoke
             // before handling the transition so locks already pending or engaged
             // lose the window, and idempotently again after the lock armed below.
@@ -1131,8 +1132,8 @@ void Application::initSystemBusServices() {
           // callback and force an immediate repaint of the lock surfaces.
           if (m_lockScreen.isActive()) {
             m_lockScreen.forceRepaintAfterResume();
-            m_lockScreen.onSystemResumed();
           }
+          m_lockScreen.onSystemResumed();
           m_weatherService.requestRefresh();
           m_gammaService.reevaluateSchedule();
           // Auto theme mode schedules with steady_clock timers, which do not advance while

@@ -789,7 +789,8 @@ bool LockSurface::usesDesktopCaptureBackground() const noexcept {
 }
 
 void LockSurface::configureTransition(
-    std::optional<LockscreenTransitionKind> transition, const LockscreenTransitionParams& params, float durationMs
+    std::optional<LockscreenTransitionKind> transition, const LockscreenTransitionParams& params, float durationMs,
+    bool animateEnter
 ) {
   cancelTransitionAnimation();
   m_transitionParams = params;
@@ -804,6 +805,13 @@ void LockSurface::configureTransition(
   }
 
   m_transition = *transition;
+  if (!animateEnter) {
+    m_transitionPhase = TransitionPhase::Stable;
+    syncTransitionCover();
+    requestLayout();
+    return;
+  }
+
   m_transitionProgress = 0.0F;
   m_transitionPhase = TransitionPhase::Cover;
   syncTransitionCover();
@@ -815,6 +823,24 @@ void LockSurface::startEnterTransition() {
   if (m_transitionPhase == TransitionPhase::Ready) {
     beginEnterAnimation();
   }
+}
+
+void LockSurface::settleEnterTransition() {
+  const bool entering = m_transitionPhase == TransitionPhase::Cover
+      || m_transitionPhase == TransitionPhase::FinalPrime
+      || m_transitionPhase == TransitionPhase::Ready
+      || m_transitionPhase == TransitionPhase::Entering;
+  if (!entering) {
+    return;
+  }
+
+  m_enterTransitionRequested = false;
+  cancelTransitionAnimation();
+  m_transitionPhase = TransitionPhase::Stable;
+  m_transitionProgress = 1.0F;
+  syncTransitionCover();
+  requestUpdate();
+  requestRedraw();
 }
 
 void LockSurface::startExitTransition() {
