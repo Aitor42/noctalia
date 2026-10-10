@@ -69,8 +69,6 @@ public:
   /// After suspend/resume, discard pending callbacks on active lock surfaces
   /// while preserving queued work, then request an immediate redraw.
   void forceRepaintAfterResume();
-  /// Prevent a lock transition from remaining visible across an upcoming sleep.
-  void onSystemSuspending();
   /// After suspend/resume, revoke the passwordless grace period as a safety net;
   /// the boottime expiry check alone would also have expired it by then.
   void onSystemResumed();
@@ -169,7 +167,6 @@ private:
   bool m_lockDeferred = false;
   bool m_unlocking = false;
   bool m_unlockFinishQueued = false;
-  bool m_suppressEnterTransition = false;
   std::optional<LockscreenTransition> m_activeTransition;
   LockscreenTransitionParams m_transitionParams;
   float m_transitionDurationMs = 1500.0F;

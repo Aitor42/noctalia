@@ -326,7 +326,6 @@ bool SessionActionRunner::requestShutdownDetached() const {
 }
 
 bool SessionActionRunner::lockThenSuspendDetached() const {
-  m_lockScreen.onSystemSuspending();
   m_lockScreen.runAfterSessionLocked([this]() { (void)requestSuspendDetached(); });
   // runAfterSessionLocked either just armed grace via lock() or left an existing
   // window live; kill it so sleep-bound locks never accept passwordless input before

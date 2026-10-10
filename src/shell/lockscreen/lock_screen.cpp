@@ -298,7 +298,6 @@ void LockScreen::finishUnlock() {
   m_wayland->stopKeyRepeat();
   invalidateDesktopCaptures();
   m_activeTransition.reset();
-  m_suppressEnterTransition = false;
 
   // Tear down widgets while lock surfaces still exist. Session hooks run only after
   // isActive() is false so LockscreenWidgetsController::applyVisibility() hides first.
@@ -333,15 +332,6 @@ void LockScreen::forceRepaintAfterResume() {
   for (auto& inst : m_instances) {
     if (inst.surface != nullptr) {
       inst.surface->forceRepaintAfterResume();
-    }
-  }
-}
-
-void LockScreen::onSystemSuspending() {
-  m_suppressEnterTransition = true;
-  for (auto& instance : m_instances) {
-    if (instance.surface != nullptr) {
-      instance.surface->settleEnterTransition();
     }
   }
 }
@@ -573,9 +563,6 @@ void LockScreen::onSystemResumed() {
     kLog.info("system resumed; revoking passwordless grace period");
   }
   resetGracePeriod();
-  if (!m_lockPending && !m_lockStarting && !m_lockDeferred) {
-    m_suppressEnterTransition = false;
-  }
 }
 
 bool LockScreen::isSessionLocked() const noexcept { return m_locked; }
@@ -658,7 +645,6 @@ void LockScreen::handleLocked(void* data, ext_session_lock_v1* /*lock*/) {
     instance.surface->setOnLogin([self]() { self->tryAuthenticate(); });
     instance.surface->startEnterTransition();
   }
-  self->m_suppressEnterTransition = false;
 
   // Start the fallback timer (3 seconds) to trigger suspend anyway if surfaces take too long to render
   self->m_suspendTimeoutTimer.start(std::chrono::seconds(3), [self]() {
@@ -708,7 +694,6 @@ void LockScreen::handleFinished(void* data, ext_session_lock_v1* /*lock*/) {
   self->m_statusIsError = false;
   self->invalidateDesktopCaptures();
   self->m_activeTransition.reset();
-  self->m_suppressEnterTransition = false;
   if (wasLockedInteractive && self->m_onSessionUnlocked) {
     self->m_onSessionUnlocked();
   } else if (!wasLockedInteractive && self->m_onLockAborted) {
@@ -1053,9 +1038,7 @@ void LockScreen::createInstance(const WaylandOutput& output) {
   }
   const std::optional<LockscreenTransitionKind> transition =
       m_activeTransition.has_value() ? std::optional{renderTransitionKind(*m_activeTransition)} : std::nullopt;
-  surface->configureTransition(
-      transition, m_transitionParams, m_transitionDurationMs, !m_suppressEnterTransition && !m_locked
-  );
+  surface->configureTransition(transition, m_transitionParams, m_transitionDurationMs);
   surface->setRenderCallback([this]() { tryFlushPendingAfterLocked(); });
   surface->setTransitionCallback([this]() { handleTransitionStateChanged(); });
   surface->setOnLogin([this]() { tryAuthenticate(); });
@@ -1096,7 +1079,6 @@ void LockScreen::resetLockState() {
   m_lockStarting = false;
   m_unlocking = false;
   m_unlockFinishQueued = false;
-  m_suppressEnterTransition = false;
   m_activeTransition.reset();
   invalidateDesktopCaptures();
   resetGracePeriod();
